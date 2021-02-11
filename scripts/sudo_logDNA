@@ -1,3 +1,5 @@
-Cmnd_Alias LOGNDA = /usr/bin/systemctl restart logdna-agent*, /usr/bin/systemctl stop logdna-agent*, /usr/bin/systemctl start logdna-agent*, /usr/bin/systemctl status logdna-agent*, /usr/bin/logdna-agent *, /usr/sbin/service logdna-agent *, /etc/init.d/logdna-agent *
+Cmnd_Alias LOGNDA = /usr/bin/logdna-agent *, /usr/sbin/service logdna-agent *, /etc/init.d/logdna-agent *
+Cmnd_Alias LOGNDA_SYSTEMCTL         = /usr/bin/systemctl restart logdna-agent,          /usr/bin/systemctl stop logdna-agent, /usr/bin/systemctl start logdna-agent,            /usr/bin/systemctl status logdna-agent 
+Cmnd_Alias LOGNDA_SYSTEMCTL_SERVICE = /usr/bin/systemctl restart logdna-agent.service,  /usr/bin/systemctl stop logdna-agent, /usr/bin/systemctl start logdna-agent.service,    /usr/bin/systemctl status logdna-agent.service
 
-%ssh-access ALL = NOPASSWD: LOGNDA
+%ssh-access ALL = NOPASSWD: LOGNDA, LOGNDA_SYSTEMCTL, LOGNDA_SYSTEMCTL_SERVICE
