@@ -36,7 +36,7 @@ settings:
     - type: text
       name: logPaths
       caption: Logs to monitor. 1/line
-      default: "/var/log\n#lines starting with # are ignored\n#Nginx load balancer\n#/var/log/nginx/*access_log\n#/var/log/nginx/*error_log\n#Tomcat nodes\n#/opt/tomcat/logs/catalina.out\n#/opt/tomcat/logs"
+      default: "#Will parse *.log files from specified folders if they exist\n#Specify log folder or full path to log file for custom file extensions\n#lines starting with # are ignored\n#Nginx\n/var/log/nginx/\n#Apache\n/var/log/httpd/\n#Litespeed\n/var/log/litespeed/\n/var/log/litespeed_adc/\n#Tomcat nodes\n/opt/tomcat/logs/catalina.out\n#NodeJS\n/home/jelastic/log"
 
     
 menu:
@@ -108,12 +108,14 @@ actions:
           - echo 'gpgcheck=1' >> /etc/yum.repos.d/logdna.repo;
           - echo 'gpgkey=https://assets.logdna.com/logdna.gpg' >> /etc/yum.repos.d/logdna.repo;
           - yum -y install logdna-agent; if [ $? -gt 0 ]; then echo -e "\nIssue:\nCan't install logdna-agent"; exit 0; fi;
-          - echo "hostname = $(hostname)" > /etc/logdna.conf;
-          - echo "key = ${settings.ingestionKey}" >> /etc/logdna.conf;
-          - logs=""; delim=""; for log in $(printf "${settings.logPaths}" | egrep -v "#|^/root|^/etc|^/var/lib"); do if [ -f $log ]; then log=$(dirname $log); fi; logs="$logs$delim$log"; delim=","; if [ $? -gt 0 ]; then echo -e "Issue:\nFailed to add $log"; exit 0; fi; done;
-          - echo "logdir = $logs" >> /etc/logdna.conf;
-          - if [ "" != "${settings.logDNATag}" ]; then echo "tags = ${settings.logDNATag}" >> /etc/logdna.conf; if [ $? -gt 0 ]; then echo -e "Issue:\nFailed to set tag ${settings.logDNATag}"; exit 0; fi; fi;
-          - chown jelastic /etc/logdna.conf;
+          - rm -f /etc/logdna.conf
+          - logs=""; delim=""; for log in $(printf "${settings.logPaths}" | egrep -v "#|^/root|^/etc|^/var/lib"); do logs="$logs$delim$log"; delim=","; if [ $? -gt 0 ]; then echo -e "Issue:\nFailed to add $log"; exit 0; fi; done;
+          - mkdir /etc/logdna;
+          - touch /etc/logdna/config.yaml;
+          - chown -R jelastic /etc/logdna;
+          - curl -fsSL '${baseUrl}/scripts/buildConfigYaml.sh' -o /root/buildConfigYaml.sh;
+          - chmod +x /root/buildConfigYaml.sh;
+          - /root/buildConfigYaml.sh "${settings.ingestionKey}" "$(hostname)" "${settings.logDNATag}" "$logs"
           - systemctl enable logdna-agent;
           - systemctl restart logdna-agent;
           - curl -fsSL '${baseUrl}/scripts/sudo_logDNA' -o /etc/sudoers.d/logDNA;
