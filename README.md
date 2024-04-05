@@ -1,11 +1,11 @@
 # logDNA Add-on
 
-This repository provides [LogDNA](https://docs.logdna.com/docs/getting-started) add-on for Jelastic Platform.
+This repository provides [LogDNA](https://docs.logdna.com/docs/getting-started) add-on for Enscale.
 
 **LogDNA** is the easiest centralized log management software
 
 **Type of nodes this add-on can be applied to**: 
-- All CentOS based nodes.
+- All AlmaLinux based nodes.
 
 ### What it can be used for?
 LogDNA is a cloud log management software that aggregates all system and application logs in one centralized logging system. Our easy, blazing fast system allows you to collect, monitor, parse, live tail, graph, and analyze logs with clear visualizations and smart alerting. Sign up for an account at logdna.com. Get setup and start logging within minutes!
@@ -25,8 +25,9 @@ For more information on what Jelastic add-on is and how to apply it, follow the 
 
 * Ingestion Key : The Ingestion Key provided in your LogDNA dashboard
 * Tags : Tag to add to sent log entries
-* Logs to monitor : Multiple folders from where to read the logs. 1.linne
+* Logs to monitor : Multiple folders from where to read the logs. 1/line
 ```
+/var/log
 #lines starting with # are ignored
 #Nginx load balancer
 #/var/log/nginx/*access_log
@@ -51,8 +52,8 @@ Once installed you can:
 
 ### CLI options:
 ```
-sudo /etc/init.d/logdna-agent status
-sudo /etc/init.d/logdna-agent stop
-sudo /etc/init.d/logdna-agent start
+sudo systemctl status logdna-agent
+sudo systemctl stop logdna-agent
+sudo systemctl start logdna-agent
 logdna-agent -h
 ```
