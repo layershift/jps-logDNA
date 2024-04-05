@@ -1,6 +1,6 @@
-_info : 'https://docs.cloudscripting.com/1.6.2/'
-version: 1.6.2
-build: 20200122
+_info : 'https://docs.cloudscripting.com/8.4.1/'
+version: 8.4.1
+build: 20240405
 type: update
 name: 'logDNA'
 id: 'logDNA'
@@ -36,7 +36,7 @@ settings:
     - type: text
       name: logPaths
       caption: Logs to monitor. 1/line
-      default: "#lines starting with # are ignored\n#Nginx load balancer\n#/var/log/nginx/*access_log\n#/var/log/nginx/*error_log\n#Tomcat nodes\n#/opt/tomcat/logs/catalina.out\n#/opt/tomcat/logs"
+      default: "/var/log\n#lines starting with # are ignored\n#Nginx load balancer\n#/var/log/nginx/*access_log\n#/var/log/nginx/*error_log\n#Tomcat nodes\n#/opt/tomcat/logs/catalina.out\n#/opt/tomcat/logs"
 
     
 menu:
@@ -80,8 +80,7 @@ onInstall:
 
 onUninstall:
   cmd [${targetNodes.nodeGroup}]:
-    - /etc/init.d/logdna-agent stop;
-    - chkconfig --del logdna-agent;
+    - systemctl stop logdna-agent;
     - yum -y remove logdna-agent;
     - rm -f /etc/sudoers.d/logDNA;
     - rm -f /etc/profile.d/logdna-agent.sh;
@@ -101,25 +100,22 @@ actions:
           - echo -e "\n\nOn node ${@node.id}";
           - which rpm 2>/dev/null >/dev/null; if [ $? -gt 0 ]; then echo -e "Issue:\nrpm not found"; exit 0; fi;
           - which systemctl 2>/dev/null >/dev/null; if [ $? -gt 0 ]; then echo -e "Issue:\nsystemctl not found"; exit 0; fi;
-          - rpm --import https://repo.logdna.com/logdna.gpg;
+          - rpm --import https://assets.logdna.com/logdna.gpg;
           - echo '[logdna]' > /etc/yum.repos.d/logdna.repo;
           - echo 'name=LogDNA packages' >> /etc/yum.repos.d/logdna.repo;
-          - echo 'baseurl=https://repo.logdna.com/el6/' >> /etc/yum.repos.d/logdna.repo;
+          - echo 'baseurl=https://assets.logdna.com/el6/' >> /etc/yum.repos.d/logdna.repo;
           - echo 'enabled=1' >> /etc/yum.repos.d/logdna.repo;
           - echo 'gpgcheck=1' >> /etc/yum.repos.d/logdna.repo;
-          - echo 'gpgkey=https://repo.logdna.com/logdna.gpg' >> /etc/yum.repos.d/logdna.repo;
+          - echo 'gpgkey=https://assets.logdna.com/logdna.gpg' >> /etc/yum.repos.d/logdna.repo;
           - yum -y install logdna-agent; if [ $? -gt 0 ]; then echo -e "\nIssue:\nCan't install logdna-agent"; exit 0; fi;
-          - logdna-agent -k "${settings.ingestionKey}";
-          - logdna-agent -s hostname=$(hostname);
-          - logdna-agent -u logdir;
-          - logdna-agent -s logdir=/var/log;
-          - for log in $(printf "${settings.logPaths}" | egrep -v "#|^/root|^/etc|^/var/lib"); do logdna-agent -d "$log"; if [ $? -gt 0 ]; then echo -e "Issue:\nFailed to add $log"; exit 0; fi; done;
-          - logdna-agent -u tags;
-          - if [ "" != "${settings.logDNATag}" ]; then logdna-agent -t "${settings.logDNATag}"; if [ $? -gt 0 ]; then echo -e "Issue:\nFailed to set tag ${settings.logDNATag}"; exit 0; fi; fi;
+          - echo "hostname = $(hostname)" > /etc/logdna.conf;
+          - echo "key = ${settings.ingestionKey}" >> /etc/logdna.conf;
+          - logs=""; delim=""; for log in $(printf "${settings.logPaths}" | egrep -v "#|^/root|^/etc|^/var/lib"); do if [ -f $log ]; then log=$(dirname $log); fi; logs="$logs$delim$log"; delim=","; if [ $? -gt 0 ]; then echo -e "Issue:\nFailed to add $log"; exit 0; fi; done;
+          - echo "logdir = $logs" >> /etc/logdna.conf;
+          - if [ "" != "${settings.logDNATag}" ]; then echo "tags = ${settings.logDNATag}" >> /etc/logdna.conf; if [ $? -gt 0 ]; then echo -e "Issue:\nFailed to set tag ${settings.logDNATag}"; exit 0; fi; fi;
           - chown jelastic /etc/logdna.conf;
-          - chkconfig --add logdna-agent;
-          - chkconfig --level 2345 logdna-agent on;
-          - /etc/init.d/logdna-agent restart;
+          - systemctl enable logdna-agent;
+          - systemctl restart logdna-agent;
           - curl -fsSL '${baseUrl}/scripts/sudo_logDNA' -o /etc/sudoers.d/logDNA;
           - chmod 640 /etc/sudoers.d/logDNA;
           - curl -fsSL '${baseUrl}/scripts/profile_logdna-agent' -o /etc/profile.d/logdna-agent.sh;
@@ -136,10 +132,10 @@ actions:
       - message: ""
     - forEach(node:targetNodes):
       - cmd [${@node.id}]:
-          - /etc/init.d/logdna-agent restart 2>&1 > /dev/null;
+          - systemctl restart logdna-agent 2>&1 > /dev/null;
           - sleep 5;
-          - /etc/init.d/logdna-agent status 2>&1 > /dev/null;
-          - if [ $? -gt 0 ]; then echo -en " - On node ${@node.id}\nStatus =  "; /etc/init.d/logdna-agent status; echo -e " \n\n"; fi;
+          - systemctl is-active logdna-agent 2>&1 > /dev/null;
+          - if [ $? -gt 0 ]; then echo -en " - On node ${@node.id}\nStatus =  "; systemctl status logdna-agent | grep Active; echo -e " \n\n"; fi;
         user: root
       - appendMessage: ${response.out}
     - if (globals.message.length > 0):
@@ -156,7 +152,7 @@ actions:
     - forEach(node:targetNodes):
       - cmd [${@node.id}]:
           - echo -en " - On node ${@node.id}\nStatus =  ";
-          - /etc/init.d/logdna-agent status;
+          - systemctl status logdna-agent | grep Active;
           - echo -e " \n\n";
         user: root
       - appendMessage: ${response.out}
