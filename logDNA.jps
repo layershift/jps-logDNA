@@ -128,6 +128,11 @@ actions:
         message:  ${globals.message}
         script: |
           return {result: 2309, message: message.replace(/\n/g, '  \n')}
+    - api:
+      - method: environment.control.addcontainerenvvars
+        vars:
+          MZ_SYSTEMD_JOURNAL_TAILER: false
+      nodeGroup: ${targetNodes.nodeGroup}
 
   restartLogDNA:
     - setGlobals:
