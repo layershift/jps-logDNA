@@ -79,3 +79,5 @@ echo "    regex: []" >> /etc/logdna/config.yaml
 echo "  log_metric_server_stats: null" >> /etc/logdna/config.yaml
 echo "  clear_cache_interval: 21600" >> /etc/logdna/config.yaml
 echo "  metadata_retry_delay: 0" >> /etc/logdna/config.yaml
+echo "journald:" >> /etc/logdna/config.yaml
+echo "  systemd_journal_tailer: false" >> /etc/logdna/config.yaml
